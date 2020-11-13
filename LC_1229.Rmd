@@ -1,0 +1,199 @@
+---
+title: "LC_1229"
+author: "Chichieh"
+date: "2019/12/29"
+output: word_document
+---
+
+```{r setup, echo=FALSE}
+counts = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/1228/LC_47_count.csv",
+                  row.names= 1)
+info = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/1228/LC_47.csv",
+                row.names= 1)
+
+```
+
+
+```{r, message=F}
+library(edgeR)
+library(DESeq2)
+library(ggfortify)
+library(limma)
+library(DEGreport)
+library(scatterpie)
+library(ggrepel)
+library(pheatmap)
+library(nnet)
+library(glmnet)
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(DirichletReg)
+```
+
+## 1. 將資料變為15*100, Gene
+```{r}
+dds = DESeqDataSetFromMatrix(countData = counts, 
+                             colData = info, 
+                             design = ~ 1)
+normalized_counts = assay(vst(dds))
+Lc <- cbind(info, t(normalized_counts))
+Lc <- cbind(info, t(normalized_counts))
+trinary <- data.frame(group= c("A", "B", "C"))
+
+for (i in 1:47) {
+  start <- (i-1)*100 + 1
+  end <- (i)*100
+  trinary[start:end, 2:10001] <- Lc[i, 4:10003]
+  
+  endA <- start + Lc$Feature_A[i]-1
+  endB <- endA + Lc$Feature_B[i]
+  endC <- endB + Lc$Feature_C[i]
+  
+  if (Lc$Feature_A[i]!= 0) trinary[start:endA, 1] <- "A"
+  if (Lc$Feature_B[i]!= 0) trinary[(endA+1):endB, 1] <- "B"
+  if (Lc$Feature_C[i]!= 0) trinary[(endB+1):endC, 1] <- "C"
+}
+```
+
+## 4. LASSO + Multinomial
+共挑選出33個genes
+```{r}
+x <- model.matrix(group~ .
+                  , data = trinary)[, -1]
+y <- trinary$group
+
+ames_ridge <- glmnet(
+  x = x,
+  y = y,
+  alpha = 1,
+  standardize = FALSE,
+  nlambda = 1000,
+  family = "multinomial",
+  type.multinomial = "grouped"
+)
+
+
+ames_auc_cv <- cv.glmnet(
+  x = x,
+  y = y,
+  alpha = 1,
+  nlambda = 1000,
+  family = "multinomial", 
+  type.multinomial = "grouped",
+  type.measure = "deviance"
+)
+
+plot(ames_auc_cv)
+best.lambda_deviance <- ames_auc_cv$lambda.min
+best.lambda_deviance_1se <- ames_auc_cv$lambda.1se
+
+{
+  par(mfcol = c(2, 2))
+  plot(ames_ridge, xvar = "lambda") 
+  abline(v = log(best.lambda_deviance), col = "red", lty = "dashed")
+  par(mfcol = c(1, 1))
+}
+
+# selection
+A <- as.numeric(unlist(coef(ames_auc_cv, s = "lambda.min"))[[1]])[-1]
+B <- as.numeric(unlist(coef(ames_auc_cv, s = "lambda.min"))[[2]])[-1]
+C <- as.numeric(unlist(coef(ames_auc_cv, s = "lambda.min"))[[3]])[-1]
+
+select.ind <- c(which(A != 0), which(B != 0), which(C != 0))
+importantRNA_deviance <- unique(select.ind)
+importantRNA_deviance
+```
+
+
+
+## 5. Multinomial CV
+做leave one out 
+使用LASSO找到全部58個基因
+```{r, message=F}
+muti_pre_CV <- info
+muti_pre_CV$A <- 0
+muti_pre_CV$B <- 0
+muti_pre_CV$C <- 0
+
+Lc <- cbind(info, t(normalized_counts))
+Lc <- Lc[ ,-c(1,2,3)]
+
+sele <- trinary[, c(1, importantRNA_deviance+1)] #1500*15
+pre <- as.data.frame(Lc[, (importantRNA_deviance)])
+i=1
+
+for(i in 1:47){
+  start <- (i-1)*100 + 1
+  end <- (i)*100
+  train_M <- sele[-c(start:end), ]
+  test_M <- pre[i, ]
+  model <- multinom(group ~ ., data = train_M)
+  temp <- predict(model, newdata= test_M, type= "probs")
+  
+  options(scipen=999)
+  options(digits = 3)
+  muti_pre_CV$A[i] <- round(temp[1]*100)
+  muti_pre_CV$B[i] <- round(temp[2]*100)
+  muti_pre_CV$C[i] <- round(temp[3]*100)
+}
+
+```
+
+```{r}
+muti_pre_CV %>% mutate(BC= B+ C)  %>% select(A, BC)
+```
+
+## 6. Dirichlet 
+畫圖
+```{r}
+precentLC <- DR_data(info[, 1:3]/100)
+
+plot(precentLC, cex = 2, a2d = list(colored = T, c.grid = T))
+
+```
+
+## 7. Dirichlet model
+```{r}
+importantRNA_deviance <- c(707,1257,2777,3808,3901,4052,
+                           5894,6101,7098,8210,9689,9733)
+Di_data <- as.data.frame(Lc[, (importantRNA_deviance)]) %>% cbind(info/100)
+
+mod2 <- DirichReg(precentLC~ .-Feature_A -Feature_B- Feature_C, data = Di_data)
+
+```
+
+
+## 8. Dirichlet CV
+做leave one out 
+```{r, message=F}
+Di_pre_CV <- info
+Di_pre_CV$A <- 0
+Di_pre_CV$B <- 0
+Di_pre_CV$C <- 0
+
+
+Di_data <- as.data.frame(Lc[, (importantRNA_deviance)]) %>% cbind(info/100)
+
+for(i in 1:47){
+  precentLCi <- DR_data(info[-i, 1:3]/100)
+  train_M <- Di_data[-i, ]
+  test_M <- Di_data[i, 1:12]
+  mod2 <- DirichReg(precentLCi~ .-Feature_A -Feature_B- Feature_C, data = train_M)
+  temp <- predict(mod2, newdata= test_M)
+  
+
+  Di_pre_CV$A[i] <- round(temp[1]*100)
+  Di_pre_CV$B[i] <- round(temp[2]*100)
+  Di_pre_CV$C[i] <- round(temp[3]*100)
+}
+Di_pre_CV
+```
+
+```{r}
+######## 22.3 KM ####
+find_ANOVA <- normalized_counts[importantRNA_deviance, ]
+counts_cor <- cor(find_ANOVA)
+pheatmap(counts_cor, annotation = info)
+```
+
