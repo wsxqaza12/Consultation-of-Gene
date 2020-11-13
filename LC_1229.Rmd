@@ -6,9 +6,9 @@ output: word_document
 ---
 
 ```{r setup, echo=FALSE}
-counts = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/1228/LC_47_count.csv",
+counts = read.csv("data/1228/LC_47_count.csv",
                   row.names= 1)
-info = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/1228/LC_47.csv",
+info = read.csv("data/1228/LC_47.csv",
                 row.names= 1)
 
 ```

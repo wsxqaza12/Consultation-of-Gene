@@ -20,8 +20,8 @@ library(caret)
 library(ggplot2)
 
 ######## 1 mount ########
-counts = readRDS("C:/Users/User/Desktop/研究所/碩二上/統計諮詢1/KO_sample_counts.rds")
-info = readRDS("C:/Users/User/Desktop/研究所/碩二上/統計諮詢1/KO_sample_info.rds")
+counts = readRDS("data/KO_sample_counts.rds")
+info = readRDS("data/KO_sample_info.rds")
 dds = DESeqDataSetFromMatrix(countData = counts, 
                              colData = info, 
                              design = ~ Sex + Group)
@@ -57,8 +57,8 @@ dim(adjusted_counts_lrt[sig_genes,])
 
 # ANOVA ####
 ######## 2 LC ########
-counts = readRDS("C:/Users/User/Desktop/研究所/碩二上/統計諮詢1/LC_sample_counts.rds")
-info = readRDS("C:/Users/User/Desktop/研究所/碩二上/統計諮詢1/LC_sample_info.rds")
+counts = readRDS("data/LC_sample_counts.rds")
+info = readRDS("data/LC_sample_info.rds")
 
 cpm <- cpm(counts)
 

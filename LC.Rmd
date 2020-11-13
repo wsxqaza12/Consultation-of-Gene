@@ -8,8 +8,8 @@ output:
 ---
 
 ```{r setup, echo=FALSE}
-counts = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/LC_40_Count.csv", row.names= 1)
-info = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/LC_40.csv", row.names= 1)
+counts = read.csv("data/LC_40_Count.csv", row.names= 1)
+info = read.csv("data/LC_40.csv", row.names= 1)
 
 ```
 
@@ -149,7 +149,7 @@ muti_pre_CV %>% mutate(BC= B+ C)  %>% select(A, BC)
 ## 6. Dirichlet 
 畫圖
 ```{r}
-info = read.csv("C:/Users/User/Desktop/研究所/碩二上/課. 統計諮詢1/LC_40.csv", row.names= 1)
+info = read.csv("data/LC_40.csv", row.names= 1)
 precentLC <- DR_data(info[, 1:3]/100)
 
 plot(precentLC, cex = 2, a2d = list(colored = T, c.grid = T))

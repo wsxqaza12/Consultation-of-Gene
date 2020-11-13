@@ -1,6 +1,6 @@
 ######## 1 Imput data ######## 
-counts = readRDS("~/Documents/統計諮詢1/LC_sample_counts.rds")
-info = readRDS("~/Documents/統計諮詢1/LC_sample_info.rds")
+counts = readRDS("data/LC_sample_counts.rds")
+info = readRDS("data/LC_sample_info.rds")
 dds = DESeqDataSetFromMatrix(countData = counts, 
                              colData = info, 
                              design = ~ Group)
@@ -117,7 +117,7 @@ library(DirichletReg)
 Lc <- cbind(info, t(normalized_counts))
 Di_data <- as.data.frame(Gx[, (importantRNA_deviance_bi)])
 
-info = readRDS("~/Documents/統計諮詢1/LC_sample_info.rds")
+info = readRDS("data/LC_sample_info.rds")
 precentLC <- DR_data(info[, 2:4]/100)
 precentLC[,1] <- info[, 2]/100
 precentLC[,2] <- info[, 3]/100
